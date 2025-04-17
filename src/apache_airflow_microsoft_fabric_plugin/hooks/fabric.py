@@ -208,7 +208,7 @@ class FabricHook(BaseHook):
 
         raise AirflowException(f"Failed to get item details for item {item_id} in workspace {workspace_id}.")
 
-    def run_fabric_item(self, workspace_id: str, item_id: str, job_type: str, job_params: dict | None) -> str:
+    def run_fabric_item(self, workspace_id: str, item_id: str, job_type: str, job_params: dict | None, job_config: dict | None) -> str:
         """
         Run a Fabric item.
 
@@ -216,14 +216,18 @@ class FabricHook(BaseHook):
         :param item_id: The item Id. To check available items, Refer to: https://learn.microsoft.com/rest/api/fabric/admin/items/list-items?tabs=HTTP#itemtype.
         :param job_type: The type of job to run. For running a notebook, this should be "RunNotebook".
         :param job_params: An optional dictionary of parameters to pass to the job.
-
+        :param job_config: An optional dictionary of job configuration settings. Job type should be "RunNotebook".
         :return: The run Id of item.
         """
         url = f"{self._base_url}/{self._api_version}/workspaces/{workspace_id}/items/{item_id}/jobs/instances?jobType={job_type}"
 
         headers = self.get_headers()
-
-        data = {"executionData": {"parameters": job_params}} if job_params else {}
+            
+        data = {}
+        if job_params:
+            data.setdefault("executionData", {})["parameters"] = job_params
+        if job_config and job_type == "RunNotebook":
+            data.setdefault("executionData", {})["configuration"] = job_config
 
         response = self._send_request("POST", url, headers=headers, json=data)
         response.raise_for_status()
